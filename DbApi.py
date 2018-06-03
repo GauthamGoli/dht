@@ -9,8 +9,10 @@ def create_db(db_name = constants.DB_NAME):
                  hash TEXT UNIQUE NOT NULL,
                  created_timestamp datetime default current_timestamp)''')
     c.execute('''CREATE TABLE node
-                (id INTEGER PRIMARY KEY AUTOINCREMENT ,
-                 ip_addr TEXT UNIQUE NOT NULL,
+                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 node_id TEXT UNIQUE NOT NULL,
+                 ip_addr TEXT NOT NULL,
+                 port INTEGER NOT NULL,
                  created_timestamp datetime default current_timestamp)''')
     conn.commit()
     conn.close()
@@ -21,10 +23,11 @@ class Session:
         self.c = self.conn.cursor()
 
     def save_nodes(self, nodes):
-        prepared_statement = 'INSERT INTO node (ip_addr) VALUES (?)'
+        prepared_statement = 'INSERT INTO node (node_id, ip_addr, port) VALUES (?)'
         for node in nodes:
             try:
                 self.c.execute(prepared_statement, node)
+                print "{} saved".format(node)
             except sqlite3.IntegrityError:
                 print "{} already present".format(node)
                 continue
@@ -35,6 +38,7 @@ class Session:
         for info_hash in info_hashes:
             try:
                 self.c.execute(prepared_statement, info_hash)
+                print "{} saved".format(info_hash)
             except sqlite3.IntegrityError:
                 print "{} already present".format(info_hash)
                 continue
