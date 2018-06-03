@@ -23,7 +23,7 @@ class Session:
         self.c = self.conn.cursor()
 
     def save_nodes(self, nodes):
-        prepared_statement = 'INSERT INTO node (node_id, ip_addr, port) VALUES (?)'
+        prepared_statement = 'INSERT INTO node (node_id, ip_addr, port) VALUES (?, ?, ?)'
         for node in nodes:
             try:
                 self.c.execute(prepared_statement, node)

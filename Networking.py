@@ -1,13 +1,13 @@
 import SocketServer
 import bencode
 import binascii
+from DbApi import Session
 
-info_hashes = []
-discovered_nodes_count = 0
+db_writer = Session()
 
 class KRPCRequestHandler(SocketServer.BaseRequestHandler):
     def handle(self):
-        global discovered_nodes_count
+        global db_writer
         try:
             rpc_message = bencode.bdecode(self.request[0].strip())
             rpc_message_type = rpc_message["y"]
@@ -16,10 +16,13 @@ class KRPCRequestHandler(SocketServer.BaseRequestHandler):
 
         if rpc_message_type == "r":
             if rpc_message["r"].has_key("nodes"):
-                with self.server.dht_node.lock:
-                    discovered_nodes_count += 1
+                node_store = []
                 for node_id, node_ip, node_port in self.server.dht_node._decode_nodes(rpc_message["r"]['nodes']):
+                    node_store.append((node_id, node_ip, node_port))
                     self.server.dht_node.bootstrap((node_ip, node_port))
+                # Persist discovered nodes
+                with self.server.dht_node.lock:
+                    db_writer.save_nodes(node_store)
 
         elif rpc_message_type == "q":
             print "Got RPC query.. "
@@ -37,15 +40,10 @@ class KRPCRequestHandler(SocketServer.BaseRequestHandler):
         self.server.socket.sendto(response, (host, port))
 
     def _handle_get_peers(self, rpc_message):
-        global info_hashes
+        global db_writer
         with self.server.dht_node.lock:
-            if rpc_message["a"]["info_hash"] not in info_hashes:
-                print "Discovered info hash: ", rpc_message["a"]["info_hash"]
-                info_hashes.append(rpc_message["a"]["info_hash"])
-            if len(info_hashes) == 10:
-                print "Discovered 10 infohashes :", info_hashes
-                print "Number of nodes discovered: ", discovered_nodes_count
-                return
+            db_writer.save_infohash([rpc_message["a"]["info_hash"]])
+            print "Discovered info hash: ", rpc_message["a"]["info_hash"]
         response = bencode.encode({"t": rpc_message["t"],
                                    "y": "r",
                                    "r": {
