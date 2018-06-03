@@ -21,11 +21,23 @@ class Session:
         self.c = self.conn.cursor()
 
     def save_nodes(self, nodes):
-        self.c.executemany('INSERT INTO node (ip_addr) VALUES (?)', nodes)
+        prepared_statement = 'INSERT INTO node (ip_addr) VALUES (?)'
+        for node in nodes:
+            try:
+                self.c.execute(prepared_statement, node)
+            except sqlite3.IntegrityError:
+                print "{} already present".format(node)
+                continue
         self.conn.commit()
 
-    def save_infohash(self, info_hash):
-        self.c.executemany('INSERT INTO infohash (hash) VALUES (?)', info_hash)
+    def save_infohash(self, info_hashes):
+        prepared_statement = 'INSERT INTO infohash (hash) VALUES (?)'
+        for info_hash in info_hashes:
+            try:
+                self.c.execute(prepared_statement, info_hash)
+            except sqlite3.IntegrityError:
+                print "{} already present".format(info_hash)
+                continue
         self.conn.commit()
 
     def close(self):
